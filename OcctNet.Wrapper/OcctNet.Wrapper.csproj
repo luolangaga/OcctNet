@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>OcctNet.Wrapper</AssemblyName>
+    <RootNamespace>OcctNet.Wrapper</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="runtimes\**\*.*" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

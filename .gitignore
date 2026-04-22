@@ -1,0 +1,39 @@
+# Build outputs
+bin/
+obj/
+**/bin/
+**/obj/
+
+# IDE files
+.idea/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Native/CMake build outputs
+native/build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+!OcctNet.sln
+
+# Local downloaded SDKs and archives
+external/
+
+# Temporary local test projects
+temp/
+
+# Logs and local artifacts
+*.log
+TestResults/
+coverage/
+
+# OS files
+Thumbs.db
+.DS_Store

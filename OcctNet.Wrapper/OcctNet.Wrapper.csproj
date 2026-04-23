@@ -11,9 +11,12 @@
     <Authors>OcctNet Contributors</Authors>
     <Description>.NET wrapper for Open CASCADE Technology through a stable native C ABI bridge.</Description>
     <PackageTags>OCCT;OpenCASCADE;CAD;Geometry;STEP;IGES;STL</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
     <None Include="runtimes\**\*.*" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

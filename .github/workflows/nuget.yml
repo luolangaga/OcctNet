@@ -1,0 +1,227 @@
+name: Build and Publish NuGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      packageVersion:
+        description: NuGet package version. Leave empty to use 0.1.<run_number>.
+        required: false
+        type: string
+      publish:
+        description: Push the package to NuGet.org.
+        required: true
+        default: false
+        type: boolean
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  NUGET_SOURCE: "https://api.nuget.org/v3/index.json"
+
+jobs:
+  build-native:
+    name: Build native runtime (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            triplet: x64-windows
+            nativePattern: OcctNetNative.dll
+            dependencyGlob: bin/*.dll
+          - os: ubuntu-latest
+            rid: linux-x64
+            triplet: x64-linux-dynamic
+            nativePattern: libOcctNetNative.so
+            dependencyGlob: lib/*.so*
+          - os: macos-14
+            rid: osx-arm64
+            triplet: arm64-osx-dynamic
+            nativePattern: libOcctNetNative.dylib
+            dependencyGlob: lib/*.dylib
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install build tools on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake bison curl flex gperf libgl1-mesa-dev libglu1-mesa-dev libtool libx11-dev libxext-dev libxi-dev libxmu-dev ninja-build pkg-config tar unzip zip
+
+      - name: Install build tools on macOS
+        if: runner.os == 'macOS'
+        run: brew install autoconf automake bison flex libtool ninja pkg-config
+
+      - name: Install build tools on Windows
+        if: runner.os == 'Windows'
+        run: choco install ninja -y
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/vcpkg
+            ${{ github.workspace }}/vcpkg_installed
+          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('native/CMakeLists.txt', 'native/src/**', 'native/include/**', 'vcpkg-triplets/**') }}
+          restore-keys: |
+            vcpkg-${{ matrix.triplet }}-
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          $vcpkgRoot = Join-Path "${{ runner.temp }}" "vcpkg"
+          if (!(Test-Path $vcpkgRoot)) {
+            git clone https://github.com/microsoft/vcpkg.git $vcpkgRoot
+          }
+
+          if ($IsWindows) {
+            & "$vcpkgRoot/bootstrap-vcpkg.bat"
+          } else {
+            & "$vcpkgRoot/bootstrap-vcpkg.sh"
+          }
+
+          "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Install OpenCASCADE
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_ROOT/vcpkg" install opencascade:${{ matrix.triplet }} --x-install-root="$env:GITHUB_WORKSPACE/vcpkg_installed" --overlay-triplets="$env:GITHUB_WORKSPACE/vcpkg-triplets"
+
+      - name: Configure native bridge
+        shell: pwsh
+        run: |
+          cmake -S native -B native/build `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET="${{ matrix.triplet }}" `
+            -DVCPKG_INSTALLED_DIR="$env:GITHUB_WORKSPACE/vcpkg_installed" `
+            -DVCPKG_OVERLAY_TRIPLETS="$env:GITHUB_WORKSPACE/vcpkg-triplets"
+
+      - name: Build native bridge
+        run: cmake --build native/build --config Release
+
+      - name: Stage runtime files
+        shell: pwsh
+        run: |
+          $rid = "${{ matrix.rid }}"
+          $runtimeDir = Join-Path $env:GITHUB_WORKSPACE "OcctNet.Wrapper/runtimes/$rid/native"
+          New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
+
+          $native = Get-ChildItem native/build -Recurse -File -Filter "${{ matrix.nativePattern }}" | Select-Object -First 1
+          if ($null -eq $native) {
+            throw "Native bridge output was not found: ${{ matrix.nativePattern }}"
+          }
+
+          Copy-Item $native.FullName $runtimeDir -Force
+
+          $vcpkgTripletRoot = Join-Path $env:GITHUB_WORKSPACE "vcpkg_installed/${{ matrix.triplet }}"
+          $dependencyPath = Join-Path $vcpkgTripletRoot "${{ matrix.dependencyGlob }}"
+          Get-ChildItem -Path $dependencyPath -File |
+            ForEach-Object { Copy-Item $_.FullName $runtimeDir -Force }
+
+          if ($IsMacOS) {
+            $dylib = Join-Path $runtimeDir "libOcctNetNative.dylib"
+            install_name_tool -add_rpath "@loader_path" $dylib 2>$null || true
+          }
+
+          Get-ChildItem $runtimeDir | Select-Object Name, Length
+
+      - name: Validate wrapper build
+        run: dotnet build OcctNet.Wrapper/OcctNet.Wrapper.csproj --configuration Release
+
+      - name: Upload runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.rid }}
+          path: OcctNet.Wrapper/runtimes/${{ matrix.rid }}
+          if-no-files-found: error
+
+  pack:
+    name: Pack NuGet
+    runs-on: ubuntu-latest
+    needs: build-native
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Clear checked-in runtimes
+        shell: pwsh
+        run: |
+          $runtimeRoot = "OcctNet.Wrapper/runtimes"
+          Remove-Item $runtimeRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $runtimeRoot | Out-Null
+
+      - name: Download native runtime artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: OcctNet.Wrapper/runtimes
+
+      - name: Compute package version
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.packageVersion }}"
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            if ("${{ github.ref_type }}" -eq "tag") {
+              $version = "${{ github.ref_name }}".TrimStart("v")
+            } else {
+              $version = "0.1.${{ github.run_number }}"
+            }
+          }
+
+          "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "Package version: $version"
+
+      - name: Pack wrapper only
+        run: |
+          dotnet pack OcctNet.Wrapper/OcctNet.Wrapper.csproj \
+            --configuration Release \
+            --output artifacts/packages \
+            -p:PackageVersion=${PACKAGE_VERSION}
+
+      - name: Verify package excludes sample app
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem artifacts/packages/*.nupkg | Select-Object -First 1
+          $entries = tar -tf $package.FullName
+          $sampleEntries = $entries | Select-String -Pattern "^(OcctNet/|.*\.axaml$|.*Avalonia.*)"
+          if ($sampleEntries) {
+            $sampleEntries
+            throw "NuGet package contains sample app files."
+          }
+
+      - name: Upload NuGet package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: artifacts/packages/*.nupkg
+          if-no-files-found: error
+
+      - name: Push to NuGet.org
+        if: github.event_name == 'push' || inputs.publish == true
+        run: dotnet nuget push "artifacts/packages/*.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "${{ env.NUGET_SOURCE }}" --skip-duplicate

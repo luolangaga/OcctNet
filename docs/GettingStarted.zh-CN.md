@@ -47,6 +47,15 @@ OcctNet.Wrapper/runtimes/win-x64/native/
 OcctNetNative.dll
 TKernel.dll
 TKMath.dll
+TKG2d.dll
+TKG3d.dll
+TKBRep.dll
+TKTopAlgo.dll
+TKPrim.dll
+TKMesh.dll
+TKGeomBase.dll
+TKGeomAlgo.dll
+TKShHealing.dll
 tbb12.dll
 jemalloc.dll
 msvcp140.dll

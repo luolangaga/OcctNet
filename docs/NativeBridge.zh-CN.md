@@ -113,14 +113,20 @@ OCCT 抛出的 `Standard_Failure` 会被 native 层捕获，并通过 `occtnet_g
 
 ## 当前链接的 OCCT 模块
 
-当前 native shim 只链接：
+当前 native shim 链接：
 
 ```text
 TKernel
 TKMath
+TKG2d
+TKG3d
+TKBRep
+TKTopAlgo
+TKPrim
+TKMesh
 ```
 
-这足够支持 `gp_Pnt` 这类基础数学/几何数据。
+这支持 `gp_Pnt`、`TopoDS_Shape`、box/cylinder/sphere、shape 平移、包围盒查询和三角化网格导出。
 
 如果后续要支持 BRep、STEP、IGES、可视化，需要在 `native/CMakeLists.txt` 中追加对应模块，并同步复制对应 DLL。
 

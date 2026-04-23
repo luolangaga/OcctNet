@@ -1,20 +1,93 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:OcctNet.ViewModels"
+        xmlns:controls="using:OcctNet.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="820"
         x:Class="OcctNet.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="OcctNet">
+        Width="1280"
+        Height="820"
+        MinWidth="980"
+        MinHeight="640"
+        Title="OcctNet Model Studio">
 
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <Grid RowDefinitions="48,*,28" ColumnDefinitions="64,*,280" Background="#F4F6F8">
+        <Border Grid.Row="0" Grid.ColumnSpan="3" Background="#26313D" BorderBrush="#1D252E" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="14,0">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Text="OcctNet" Foreground="#FFFFFF" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Border Background="#344251" CornerRadius="4" Padding="8,3">
+                        <TextBlock Text="{Binding NativeStatus}" Foreground="#CFE2F3" FontSize="12"/>
+                    </Border>
+                </StackPanel>
 
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Content="清空" Click="ClearScene_OnClick" MinWidth="72"/>
+                    <Button Content="推拉 +1m" Click="PushPullUp_OnClick" MinWidth="92"/>
+                    <Button Content="推拉 -1m" Click="PushPullDown_OnClick" MinWidth="92"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Grid.Column="0" Background="#2F3B47" BorderBrush="#202832" BorderThickness="0,0,1,0">
+            <StackPanel Margin="8" Spacing="8">
+                <Button Content="选" Click="SelectTool_OnClick" Height="42" ToolTip.Tip="选择矩形面"/>
+                <Button Content="线" Click="LineTool_OnClick" Height="42" ToolTip.Tip="画线"/>
+                <Button Content="矩" Click="RectangleTool_OnClick" Height="42" ToolTip.Tip="画矩形面"/>
+                <Button Content="拉" Click="PushPullTool_OnClick" Height="42" ToolTip.Tip="推拉矩形面"/>
+                <Button Content="量" Click="MeasureTool_OnClick" Height="42" ToolTip.Tip="测量距离"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" Grid.Column="1" Background="#E7EBEF">
+            <controls:SketchViewport x:Name="Viewport"/>
+        </Border>
+
+        <Border Grid.Row="1" Grid.Column="2" Background="#FFFFFF" BorderBrush="#D4D9DE" BorderThickness="1,0,0,0">
+            <ScrollViewer>
+                <StackPanel Margin="18" Spacing="18">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="工具" FontWeight="SemiBold" FontSize="15" Foreground="#25313B"/>
+                        <TextBlock Text="{Binding ActiveTool}" FontSize="26" FontWeight="SemiBold" Foreground="#111820"/>
+                    </StackPanel>
+
+                    <Border Background="#F2F5F7" CornerRadius="6" Padding="12">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="状态" FontWeight="SemiBold" Foreground="#25313B"/>
+                            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#40505F"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="8">
+                        <TextBlock Text="实体数量" Foreground="#53616E"/>
+                        <TextBlock Grid.Column="1" Text="{Binding EntityCount}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="1" Text="网格步长" Foreground="#53616E"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="0.5 m" FontWeight="SemiBold"/>
+                    </Grid>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="基础流程" FontWeight="SemiBold" Foreground="#25313B"/>
+                        <TextBlock Text="1. 选择“矩”，点击两个角点创建矩形面。" TextWrapping="Wrap"/>
+                        <TextBlock Text="2. 选择“拉”，点击矩形面生成体块。" TextWrapping="Wrap"/>
+                        <TextBlock Text="3. 选择“量”，点击两个点查看 OCCT 距离。" TextWrapping="Wrap"/>
+                        <TextBlock Text="4. 滚轮缩放视图。" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Border Grid.Row="2" Grid.ColumnSpan="3" Background="#F8FAFB" BorderBrush="#D4D9DE" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto" Margin="12,0">
+                <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Foreground="#42505C"/>
+                <TextBlock Grid.Column="1" Text="{Binding NativeStatus}" VerticalAlignment="Center" Foreground="#607080"/>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

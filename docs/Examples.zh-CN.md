@@ -237,3 +237,165 @@ OCCT version: 7.9.2
 point = OcctPointCoordinates { X = 3, Y = 4, Z = 0 }
 distance = 5
 ```
+
+## 示例 11：创建 OCCT 长方体
+
+`OcctBox` 会在 native 层调用 OCCT 的 `BRepPrimAPI_MakeBox`，得到一个 `TopoDS_Shape`。
+
+```csharp
+using OcctNet.Wrapper;
+
+using var box = new OcctBox(10, 20, 30);
+
+Console.WriteLine(box.IsNull);
+```
+
+输出：
+
+```text
+False
+```
+
+## 示例 12：读取 Shape 包围盒
+
+```csharp
+using OcctNet.Wrapper;
+
+using var box = new OcctBox(10, 20, 30);
+var bounds = box.BoundingBox;
+
+Console.WriteLine($"X: {bounds.MinX} -> {bounds.MaxX}");
+Console.WriteLine($"Y: {bounds.MinY} -> {bounds.MaxY}");
+Console.WriteLine($"Z: {bounds.MinZ} -> {bounds.MaxZ}");
+Console.WriteLine($"Size: {bounds.SizeX}, {bounds.SizeY}, {bounds.SizeZ}");
+```
+
+预期尺寸：
+
+```text
+Size: 10, 20, 30
+```
+
+## 示例 13：创建圆柱和球
+
+```csharp
+using OcctNet.Wrapper;
+
+using var cylinder = new OcctCylinder(radius: 2, height: 8);
+using var sphere = new OcctSphere(radius: 5);
+
+Console.WriteLine(cylinder.BoundingBox.SizeZ);
+Console.WriteLine(sphere.BoundingBox.SizeX);
+```
+
+预期输出：
+
+```text
+8
+10
+```
+
+## 示例 14：平移 Shape
+
+`Translate` 不会修改原 shape，而是返回一个新的 `OcctShape`。
+
+```csharp
+using OcctNet.Wrapper;
+
+using var sphere = new OcctSphere(5);
+using var moved = sphere.Translate(new OcctVector3d(10, 0, 0));
+
+Console.WriteLine(moved.BoundingBox.MinX);
+```
+
+预期输出大约是：
+
+```text
+5
+```
+
+## 示例 15：把 Shape 转成三角网格
+
+这一步是后续 Avalonia 自己实现 3D 渲染的关键。OCCT 负责几何和三角化，Avalonia 负责显示。
+
+```csharp
+using OcctNet.Wrapper;
+
+using var box = new OcctBox(10, 20, 30);
+var mesh = box.Triangulate(linearDeflection: 0.5);
+
+Console.WriteLine($"Vertices: {mesh.Vertices.Count}");
+Console.WriteLine($"Triangles: {mesh.TriangleCount}");
+
+foreach (var vertex in mesh.Vertices.Take(3))
+{
+    Console.WriteLine($"{vertex.X}, {vertex.Y}, {vertex.Z}");
+}
+```
+
+`TriangleIndices` 每三个整数表示一个三角形：
+
+```csharp
+for (var i = 0; i < mesh.TriangleIndices.Count; i += 3)
+{
+    var a = mesh.TriangleIndices[i];
+    var b = mesh.TriangleIndices[i + 1];
+    var c = mesh.TriangleIndices[i + 2];
+
+    Console.WriteLine($"{a}, {b}, {c}");
+}
+```
+
+## 示例 16：Edge、Wire、Face 和拉伸
+
+```csharp
+using OcctNet.Wrapper;
+
+using var e1 = new OcctEdge(new(0, 0, 0), new(10, 0, 0));
+using var e2 = new OcctEdge(new(10, 0, 0), new(10, 10, 0));
+using var e3 = new OcctEdge(new(10, 10, 0), new(0, 10, 0));
+using var e4 = new OcctEdge(new(0, 10, 0), new(0, 0, 0));
+
+using var wire = new OcctWire(e1, e2, e3, e4);
+using var face = new OcctFace(wire);
+using var solid = face.Extrude(new OcctVector3d(0, 0, 5));
+
+Console.WriteLine(solid.BoundingBox.SizeZ);
+```
+
+## 示例 17：布尔运算
+
+```csharp
+using OcctNet.Wrapper;
+
+using var box = new OcctBox(10, 10, 10);
+using var sphere = new OcctSphere(6);
+
+using var fused = box.Fuse(sphere);
+using var cut = box.Cut(sphere);
+using var common = box.Common(sphere);
+
+Console.WriteLine(fused.IsNull);
+Console.WriteLine(cut.IsNull);
+Console.WriteLine(common.IsNull);
+```
+
+## 示例 18：STL、STEP、IGES 导入导出
+
+```csharp
+using OcctNet.Wrapper;
+
+using var box = new OcctBox(10, 20, 30);
+
+box.ExportStl("box.stl");
+box.ExportStep("box.step");
+box.ExportIges("box.igs");
+
+using var stlShape = OcctShape.ImportStl("box.stl");
+using var stepShape = OcctShape.ImportStep("box.step");
+using var igesShape = OcctShape.ImportIges("box.igs");
+
+Console.WriteLine(stlShape.IsNull);
+Console.WriteLine(stepShape.IsNull);
+Console.WriteLine(igesShape.IsNull);
+```

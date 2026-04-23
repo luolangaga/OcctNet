@@ -51,6 +51,12 @@ internal static class NativeMethods
         throw new OcctException(ReadLastError(), status);
     }
 
+    internal static byte[] EncodePath(string filePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        return Encoding.UTF8.GetBytes(filePath + '\0');
+    }
+
     internal static string ReadLastError()
     {
         var buffer = new byte[ErrorBufferSize];
@@ -188,4 +194,110 @@ internal static class NativeMethods
 
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int occtnet_point_distance(IntPtr left, IntPtr right, out double distance);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_destroy(IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_is_null(IntPtr shape, out int isNull);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_make_box(double dx, double dy, double dz, out IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_make_cylinder(double radius, double height, out IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_make_sphere(double radius, out IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_make_edge(
+        double startX,
+        double startY,
+        double startZ,
+        double endX,
+        double endY,
+        double endZ,
+        out IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_make_wire(
+        [In] IntPtr[] edges,
+        int edgeCount,
+        out IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_make_face(IntPtr wire, out IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_get_bounding_box(
+        IntPtr shape,
+        out double minX,
+        out double minY,
+        out double minZ,
+        out double maxX,
+        out double maxY,
+        out double maxZ);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_translate(IntPtr shape, double x, double y, double z, out IntPtr translatedShape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_extrude(IntPtr shape, double x, double y, double z, out IntPtr extrudedShape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_revolve(
+        IntPtr shape,
+        double originX,
+        double originY,
+        double originZ,
+        double directionX,
+        double directionY,
+        double directionZ,
+        double angleRadians,
+        out IntPtr revolvedShape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_fuse(IntPtr left, IntPtr right, out IntPtr resultShape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_cut(IntPtr left, IntPtr right, out IntPtr resultShape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_common(IntPtr left, IntPtr right, out IntPtr resultShape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_export_stl(IntPtr shape, [In] byte[] filePath, int ascii);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_import_stl([In] byte[] filePath, out IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_export_step(IntPtr shape, [In] byte[] filePath);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_import_step([In] byte[] filePath, out IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_export_iges(IntPtr shape, [In] byte[] filePath);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_shape_import_iges([In] byte[] filePath, out IntPtr shape);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_mesh_create(IntPtr shape, double linearDeflection, double angularDeflection, out IntPtr mesh);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_mesh_destroy(IntPtr mesh);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_mesh_get_counts(IntPtr mesh, out int vertexCount, out int triangleIndexCount);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int occtnet_mesh_copy(
+        IntPtr mesh,
+        [Out] double[] vertices,
+        int vertexDoubleCount,
+        [Out] int[] triangleIndices,
+        int triangleIndexCount);
 }

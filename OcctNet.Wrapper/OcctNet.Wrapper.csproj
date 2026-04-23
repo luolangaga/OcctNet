@@ -5,6 +5,12 @@
     <Nullable>enable</Nullable>
     <AssemblyName>OcctNet.Wrapper</AssemblyName>
     <RootNamespace>OcctNet.Wrapper</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>OcctNet.Wrapper</PackageId>
+    <Title>OcctNet.Wrapper</Title>
+    <Authors>OcctNet Contributors</Authors>
+    <Description>.NET wrapper for Open CASCADE Technology through a stable native C ABI bridge.</Description>
+    <PackageTags>OCCT;OpenCASCADE;CAD;Geometry;STEP;IGES;STL</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

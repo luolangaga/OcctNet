@@ -239,7 +239,14 @@ jobs:
         shell: pwsh
         run: |
           $package = Get-ChildItem artifacts/packages/*.nupkg | Select-Object -First 1
-          $entries = tar -tf $package.FullName
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
+          try {
+            $entries = $archive.Entries | ForEach-Object { $_.FullName }
+          } finally {
+            $archive.Dispose()
+          }
+
           $sampleEntries = $entries | Select-String -Pattern "^(OcctNet/|.*\.axaml$|.*Avalonia.*)"
           if ($sampleEntries) {
             $sampleEntries
